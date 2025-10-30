@@ -18,6 +18,7 @@ nextflow.enable.dsl = 2
 
 include { UMI2DEFLINE            } from './modules/local/umi2defline'
 include { ALIGN2LIBRARY          } from './modules/local/align2library'
+include { COLLAPSEUMI            } from './modules/local/collapseumi'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -74,6 +75,8 @@ workflow CRISPER_SCREEN_PROCESSING {
              outdir          : ${params.outdir}
              bowtie2_index   : ${params.bowtie2_index}
              trim_3prime     : ${params.trim_3prime}
+             umi_separator   : ${params.umi_separator}
+             extract_method  : ${params.extract_method}
              """
              .stripIndent()
 
@@ -114,6 +117,18 @@ workflow CRISPER_SCREEN_PROCESSING {
     // Output summary
     ALIGN2LIBRARY.out.bam.view { meta, bam ->
         "Alignment completed: ${meta.id} -> ${bam.name}"
+    }
+
+    //
+    // MODULE: UMI deduplication
+    //
+    COLLAPSEUMI (
+        ALIGN2LIBRARY.out.bam
+    )
+
+    // Output summary
+    COLLAPSEUMI.out.bam.view { meta, bam ->
+        "UMI deduplication completed: ${meta.id} -> ${bam.name}"
     }
 
 }
