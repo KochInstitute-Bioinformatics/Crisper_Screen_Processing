@@ -1,4 +1,4 @@
-Sample,BarcireRead1,Read2
+Sample,Barcode,Read1,Read2
 Induction,TAAGACCC+GGGACATA,../data/250916Kno_D25-12532_1_sequence_Induction.fastq,../data/250916Kno_D25-12532_2_sequence_Induction.fastq
 Male1_T0,CGAAGTAC+TAGGACG,../data/250916Kno_D25-12532_1_sequence_Male1_Ki67plus.fastq,../data/250916Kno_D25-12532_2_sequence_Male1_Ki67plus.fastq
 Male1_Ki67plus,TAGCCTTC+AGTATGGC,../data/250916Kno_D25-12532_1_sequence_Male1_T0.fastq,../data/250916Kno_D25-12532_2_sequence_Male1_T0.fastq
