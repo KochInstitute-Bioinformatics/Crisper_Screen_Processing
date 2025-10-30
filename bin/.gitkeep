@@ -1,0 +1,3 @@
+# This file ensures the bin directory is tracked by git
+# Place your custom scripts here (Python, R, bash, etc.)
+# They will be automatically added to PATH when the pipeline runs

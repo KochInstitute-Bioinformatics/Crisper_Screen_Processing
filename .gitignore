@@ -1,0 +1,50 @@
+# Nextflow work directory
+work/
+
+# Nextflow results
+results/
+test_results/
+
+# Nextflow logs
+.nextflow*
+*.log
+
+# Nextflow timeline and reports  
+timeline.html
+report.html
+trace.txt
+dag.html
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# R
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+
+# Conda
+.conda/
+
+# Test data (comment out if you want to include test data)
+# data/
+# test_data/
