@@ -2,7 +2,10 @@ process UMI2DEFLINE {
     tag "$meta.id"
     label 'process_medium'
 
-    container "bumproo/umitools"
+    // Support both Docker and Singularity with the specified image
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'docker://bumproo/umitools' :
+        'bumproo/umitools' }"
 
     input:
     tuple val(meta), path(reads)
@@ -20,6 +23,7 @@ process UMI2DEFLINE {
     def bc_pattern = task.ext.bc_pattern ?: '(?P<umi_1>.{11})CAAAAAA.*'
     
     """
+    # UMI extraction from Read2, output processed Read1 with UMI in defline
     umi_tools extract \\
         --bc-pattern='$bc_pattern' \\
         --extract-method=regex \\
@@ -35,7 +39,7 @@ process UMI2DEFLINE {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        umi_tools: \$(umi_tools --version 2>&1 | sed 's/^.*UMI-tools version://; s/ *\$//')
+        umi_tools: \$(umi_tools --version 2>&1 | head -n1 | sed 's/.*UMI-tools version: //')
     END_VERSIONS
     """
 
@@ -48,7 +52,7 @@ process UMI2DEFLINE {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        umi_tools: \$(umi_tools --version 2>&1 | sed 's/^.*UMI-tools version://; s/ *\$//')
+        umi_tools: \$(umi_tools --version 2>&1 | head -n1 | sed 's/.*UMI-tools version: //')
     END_VERSIONS
     """
 }
