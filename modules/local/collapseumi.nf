@@ -8,7 +8,7 @@ process COLLAPSEUMI {
         'bumproo/umitools' }"
 
     input:
-    tuple val(meta), path(bam)
+    tuple val(meta), path(bam), path(bai)
 
     output:
     tuple val(meta), path("*_deduplicated.bam"), emit: bam
@@ -29,8 +29,8 @@ process COLLAPSEUMI {
     umi_tools dedup \\
         --extract-umi-method=$extract_method \\
         --umi-separator=$umi_separator \\
-        --stdin=$bam \\
-        --stdout=${prefix}_deduplicated.bam \\
+        -I $bam \\
+        -S ${prefix}_deduplicated.bam \\
         --log=${prefix}_dedup.log \\
         $args
 

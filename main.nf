@@ -123,7 +123,7 @@ workflow CRISPER_SCREEN_PROCESSING {
     // MODULE: UMI deduplication
     //
     COLLAPSEUMI (
-        ALIGN2LIBRARY.out.bam
+        ALIGN2LIBRARY.out.bam.join(ALIGN2LIBRARY.out.bai)
     )
 
     // Output summary
