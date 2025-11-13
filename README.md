@@ -6,26 +6,32 @@ A Nextflow DSL2 pipeline for processing CRISPR screening data, starting with UMI
 
 This pipeline processes CRISPR screening data through the following steps:
 
-1. **UMI Extraction**: Uses umi_tools to extract UMIs from read 2 and move them to the defline, outputting processed read 1 with UMI information
+1. **UMI Extraction** (`UMI2DEFLINE`): Extracts UMIs from read 2 and moves them to the defline of read 1
+2. **Library Alignment** (`ALIGN2LIBRARY`): Aligns processed reads to the sgRNA library using Bowtie2
+3. **UMI Deduplication** (`COLLAPSEUMI`): Collapses reads with identical UMIs to remove PCR duplicates
+
+The pipeline takes paired-end FASTQ files as input and produces deduplicated BAM files for downstream analysis.
 
 ## Usage
 
 ### Quick Start
 
-1. Install [`Nextflow`](https://www.nextflow.io/docs/latest/getstarted.html#installation) (`>=23.04.0`)
+1. Install [Nextflow](https://www.nextflow.io/docs/latest/getstarted.html#installation) (>=23.04.0)
 
-2. Install any of [`Docker`](https://docs.docker.com/engine/installation/), [`Singularity`](https://www.sylabs.io/guides/3.0/user-guide/) (you can follow [this tutorial](https://singularity-tutorial.github.io/01-installation/)), [`Podman`](https://podman.io/), [`Shifter`](https://nersc.gitlab.io/development/shifter/how-to-use/) or [`Charliecloud`](https://hpc.github.io/charliecloud/) for full pipeline reproducibility _(you can use [`Conda`](https://conda.io/miniconda.html) both to install Nextflow itself and also to manage software within pipelines. Please only use it within pipelines as a last resort; see [docs](https://nf-co.re/usage/configuration#basic-configuration-profiles))_.
+2. Install container engine (Docker, Singularity, etc.)
 
-3. Prepare your samplesheet (see [Input](#input) below)
+3. Prepare your sgRNA library Bowtie2 index
 
-4. Run the pipeline:
+4. Create your samplesheet (see [Input](#input) section)
+
+5. Run the pipeline:
 
    ```bash
-   nextflow run . -profile test,docker --outdir results
-   ```
-
-   > * The pipeline will auto-detect whether a sample is single- or paired-end using the information provided in the samplesheet.
-   > * Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/usage/configuration#custom-configuration-files).
+   nextflow run KochInstitute-Bioinformatics/Crisper_Screen_Processing \
+     --input samplesheet.csv \
+     --bowtie2_index /path/to/your/library/index \
+     --outdir results \
+     -profile singularity
 
 ## Input
 
@@ -56,29 +62,55 @@ Induction,,data/250916Kno_D25-12532_1_sequence_Induction.fastq.gz,data/250916Kno
 Male1_T0,,data/250916Kno_D25-12532_1_sequence_Male1_Ki67plus.fastq.gz,data/250916Kno_D25-12532_2_sequence_Male1_Ki67plus.fastq.gz
 ```
 
-## Parameters
+## Prerequisites
 
-### UMI Extraction Parameters
+* **sgRNA Library**: You need a Bowtie2-indexed sgRNA library. Update the `bowtie2_index` parameter to point to your library.
+* **UMI Pattern**: Ensure your UMI pattern matches your experimental design. The default pattern expects 11bp UMIs followed by "CAAAAAA".
 
-| Parameter     | Default                       | Description                           |
-| ------------- | ----------------------------- | ------------------------------------- |
-| `bc_pattern`  | `(?P<umi_1>.{11})CAAAAAA.*`   | Regex pattern for UMI extraction     |
+### Core Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `--input` | null | Path to samplesheet CSV file |
+| `--outdir` | './results' | Output directory |
+| `--bowtie2_index` | [path] | Path to Bowtie2 index for sgRNA library |
+| `--bc_pattern` | `(?P<umi_1>.{11})CAAAAAA.*` | Regex pattern for UMI extraction |
+| `--trim_3prime` | 31 | Number of bases to trim from 3' end |
+| `--umi_separator` | '_' | Separator character for UMI in read names |
+| `--extract_method` | 'read_id' | Method for UMI extraction |
 
 ## Output
 
 ### UMI Extraction
 
-- `umi_extraction/`: Contains the UMI-extracted reads
-  - `{sample}_with_umi.fastq.gz`: Read 1 with UMI information in the defline
-  - `{sample}_extract.log`: umi_tools extraction log
+* `umi_extraction/`: Contains the UMI-extracted reads
+  * `{sample}_with_umi.fastq.gz`: Read 1 with UMI information in the defline
+  * `{sample}_extract.log`: umi_tools extraction log
+
+### Library Alignment  
+
+* `alignment/`: Contains alignment results
+  * `{sample}.bam`: Aligned reads in BAM format
+  * `{sample}.bam.bai`: BAM index file
+  * `{sample}_alignment.log`: Alignment statistics
+
+### UMI Deduplication
+
+* `deduplication/`: Contains deduplicated results
+  * `{sample}_deduplicated.bam`: Final deduplicated BAM file
+  * `{sample}_dedup.log`: Deduplication statistics
 
 ### Pipeline Information
 
-- `pipeline_info/`: Contains execution reports and pipeline information
+* `pipeline_info/`: Contains execution reports and pipeline information
+  * `execution_timeline_*.html`: Timeline of pipeline execution
+  * `execution_report_*.html`: Resource usage report
+  * `execution_trace_*.txt`: Detailed execution trace
+  * `pipeline_dag_*.html`: Pipeline workflow diagram
 
 ## Directory Structure
 
-```
+```{text}
 Crisper_Screen_Processing/
 ├── assets/                 # Sample data and schemas
 ├── bin/                    # Custom scripts and executables  
@@ -108,5 +140,6 @@ This pipeline was developed using the [nf-core](https://nf-co.re/) template and 
 
 If you use this pipeline, please cite:
 
-- The nf-core framework: [Ewels et al., 2020](https://doi.org/10.1038/s41587-020-0439-x)
-- UMI-tools: [Smith et al., 2017](https://doi.org/10.1101/gr.209601.116)
+* **Nextflow**: Di Tommaso et al., 2017. Nextflow enables reproducible computational workflows. Nature Biotechnology 35, 316–319
+* **UMI-tools**: Smith et al., 2017. UMI-tools: modeling sequencing errors in Unique Molecular Identifiers to improve quantification accuracy. Genome Research 27, 491-499
+* **Bowtie2**: Langmead & Salzberg, 2012. Fast gapped-read alignment with Bowtie 2. Nature Methods 9, 357-359
