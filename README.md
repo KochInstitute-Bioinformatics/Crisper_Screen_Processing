@@ -27,7 +27,7 @@ The pipeline takes paired-end FASTQ files as input and produces deduplicated BAM
 5. Run the pipeline:
 
    ```bash
-   nextflow run KochInstitute-Bioinformatics/Crisper_Screen_Processing \
+   nextflow run KochInstitute-Bioinformatics/CRISPR_Screen_Processing \
      --input samplesheet.csv \
      --bowtie2_index /path/to/your/library/index \
      --outdir results \
@@ -111,7 +111,7 @@ Male1_T0,,data/250916Kno_D25-12532_1_sequence_Male1_Ki67plus.fastq.gz,data/25091
 ## Directory Structure
 
 ```{text}
-Crisper_Screen_Processing/
+CRISPR_Screen_Processing/
 ├── assets/                 # Sample data and schemas
 ├── bin/                    # Custom scripts and executables  
 ├── conf/                   # Configuration files
@@ -143,3 +143,4 @@ If you use this pipeline, please cite:
 * **Nextflow**: Di Tommaso et al., 2017. Nextflow enables reproducible computational workflows. Nature Biotechnology 35, 316–319
 * **UMI-tools**: Smith et al., 2017. UMI-tools: modeling sequencing errors in Unique Molecular Identifiers to improve quantification accuracy. Genome Research 27, 491-499
 * **Bowtie2**: Langmead & Salzberg, 2012. Fast gapped-read alignment with Bowtie 2. Nature Methods 9, 357-359
+
