@@ -1,7 +1,7 @@
 process COLLAPSEUMI {
     tag "$meta.id"
     label 'process_medium'
-
+    
     // Support both Docker and Singularity with the specified image
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'docker://bumproo/umitools' :
@@ -11,9 +11,9 @@ process COLLAPSEUMI {
     tuple val(meta), path(bam), path(bai)
 
     output:
-    tuple val(meta), path("${prefix}_deduplicated.bam"), emit: bam
-    path "${prefix}_dedup.log", emit: log
-    path "${prefix}_dedup_stats_*.tsv", emit: stats, optional: true
+    tuple val(meta), path("*_deduplicated.bam"), emit: bam
+    path "*_dedup.log", emit: log
+    path "*_dedup_stats_*.tsv", emit: stats, optional: true
     path "versions.yml", emit: versions
 
     when:
@@ -47,7 +47,10 @@ process COLLAPSEUMI {
     """
     touch ${prefix}_deduplicated.bam
     touch ${prefix}_dedup.log
-
+    touch ${prefix}_dedup_stats_per_umi_per_position.tsv
+    touch ${prefix}_dedup_stats_per_umi.tsv
+    touch ${prefix}_dedup_stats_edit_distance.tsv
+    
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         umi_tools: \$(umi_tools --version 2>&1 | head -n1 | sed 's/.*UMI-tools version: //')
