@@ -11,9 +11,10 @@ process COLLAPSEUMI {
     tuple val(meta), path(bam), path(bai)
 
     output:
-    tuple val(meta), path("*_deduplicated.bam"), emit: bam
-    path "*_dedup.log",                          emit: log
-    path "versions.yml",                         emit: versions
+    tuple val(meta), path("${prefix}_deduplicated.bam"), emit: bam
+    path "${prefix}_dedup.log", emit: log
+    path "${prefix}_dedup_stats_*.tsv", emit: stats, optional: true
+    path "versions.yml", emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -25,12 +26,13 @@ process COLLAPSEUMI {
     def extract_method = task.ext.extract_method ?: 'read_id'
     
     """
-    # UMI deduplication using umi_tools
+    # UMI deduplication using umi_tools with detailed statistics
     umi_tools dedup \\
         --extract-umi-method=$extract_method \\
         --umi-separator=$umi_separator \\
         -I $bam \\
         -S ${prefix}_deduplicated.bam \\
+        --output-stats=${prefix}_dedup_stats \\
         --log=${prefix}_dedup.log \\
         $args
 
