@@ -154,33 +154,39 @@ workflow CRISPER_SCREEN_PROCESSING {
     // Get sample order from the original samplesheet
     def sample_order = get_sample_order(params.input)
     
-    // Collect all deduplicated BAM files and sort them according to sample order
+    // Create a map of sample_id -> bam_file
     COLLAPSEUMI.out.bam
         .map { meta, bam -> [meta.id, bam] }
-        .collectFile() { sample_id, bam ->
-            // Create a temporary mapping file
-            ["sample_bam_mapping.txt", "${sample_id}\t${bam}\n"]
+        .collectFile(name: 'sample_bam_mapping.txt', newLine: true) { sample_id, bam ->
+            "${sample_id}\t${bam}"
         }
-        .set { ch_sample_mapping }
-    
-    // Collect BAM files in the correct order
-    COLLAPSEUMI.out.bam
-        .collect { meta, bam -> bam }
-        .set { ch_all_bams }
+        .map { mapping_file ->
+            // Read the mapping and create ordered BAM list
+            def sample_to_bam = [:]
+            mapping_file.text.split('\n').findAll { it.trim() }.each { line ->
+                def parts = line.split('\t')
+                sample_to_bam[parts[0]] = parts[1]
+            }
+            
+            // Create ordered list based on sample_order
+            def ordered_bams = sample_order.collect { sample_id ->
+                sample_to_bam[sample_id]
+            }.findAll { it != null }  // Remove any null entries
+            
+            // Create a new file with ordered BAM paths
+            def ordered_file = file("${workDir}/ordered_bams.txt")
+            ordered_file.text = ordered_bams.join('\n')
+            return ordered_file
+        }
+        .set { ch_ordered_bam_list }
     
     // Run MAGeCK count
     MAGECKCOUNT (
-        ch_all_bams,
+        ch_ordered_bam_list,
         params.mageck_library,
         sample_order,
         params.mageck_prefix
     )
-    
-    // Output summary
-    MAGECKCOUNT.out.counts.view { counts ->
-        "MAGeCK count completed: ${counts.name}"
-    }
-
 }
 
 /*

@@ -9,7 +9,7 @@ process MAGECKCOUNT {
     publishDir "${params.outdir}/mageck", mode: 'copy'
     
     input:
-    path bam_files
+    path ordered_bam_list  // This will be a file containing ordered BAM paths
     path library_file
     val sample_labels
     val output_prefix
@@ -27,20 +27,23 @@ process MAGECKCOUNT {
     def args = task.ext.args ?: ''
     def norm_method = task.ext.norm_method ?: 'median'
     
-    // Create space-separated list of BAM files
-    def bam_list = bam_files instanceof List ? bam_files.join(' ') : bam_files
-    
     // Create comma-separated sample labels
     def sample_label_str = sample_labels instanceof List ? sample_labels.join(',') : sample_labels
     
     """
+    # Read the ordered BAM file list
+    BAM_FILES=\$(cat ${ordered_bam_list} | tr '\\n' ' ')
+    
+    echo "Sample labels: ${sample_label_str}"
+    echo "BAM files in order: \$BAM_FILES"
+    
     mageck count \\
         -l ${library_file} \\
         -n ${output_prefix} \\
         --norm-method ${norm_method} \\
         --sample-label ${sample_label_str} \\
         --fastq \\
-        ${bam_list} \\
+        \$BAM_FILES \\
         ${args}
     
     cat <<-END_VERSIONS > versions.yml
