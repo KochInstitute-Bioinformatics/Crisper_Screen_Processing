@@ -19,6 +19,7 @@ nextflow.enable.dsl = 2
 include { UMI2DEFLINE            } from './modules/local/umi2defline'
 include { ALIGN2LIBRARY          } from './modules/local/align2library'
 include { COLLAPSEUMI            } from './modules/local/collapseumi'
+include { MAGECKCOUNT            } from './modules/local/mageckcount'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -59,6 +60,15 @@ def create_fastq_channel(LinkedHashMap row) {
     return fastq_meta
 }
 
+// Function to extract sample order from samplesheet for MAGeCK
+def get_sample_order(samplesheet_path) {
+    def sample_order = []
+    file(samplesheet_path).splitCsv(header: true).each { row ->
+        sample_order.add(row.Sample)
+    }
+    return sample_order
+}
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -77,6 +87,8 @@ workflow CRISPER_SCREEN_PROCESSING {
              trim_3prime     : ${params.trim_3prime}
              umi_separator   : ${params.umi_separator}
              extract_method  : ${params.extract_method}
+             mageck_library  : ${params.mageck_library}
+             mageck_prefix   : ${params.mageck_prefix}
              """
              .stripIndent()
 
@@ -136,6 +148,39 @@ workflow CRISPER_SCREEN_PROCESSING {
         "UMI deduplication stats: ${stats.name}"
     }
 
+    //
+    // MODULE: MAGeCK count
+    //
+    // Get sample order from the original samplesheet
+    def sample_order = get_sample_order(params.input)
+    
+    // Collect all deduplicated BAM files and sort them according to sample order
+    COLLAPSEUMI.out.bam
+        .map { meta, bam -> [meta.id, bam] }
+        .collectFile() { sample_id, bam ->
+            // Create a temporary mapping file
+            ["sample_bam_mapping.txt", "${sample_id}\t${bam}\n"]
+        }
+        .set { ch_sample_mapping }
+    
+    // Collect BAM files in the correct order
+    COLLAPSEUMI.out.bam
+        .collect { meta, bam -> bam }
+        .set { ch_all_bams }
+    
+    // Run MAGeCK count
+    MAGECKCOUNT (
+        ch_all_bams,
+        params.mageck_library,
+        sample_order,
+        params.mageck_prefix
+    )
+    
+    // Output summary
+    MAGECKCOUNT.out.counts.view { counts ->
+        "MAGeCK count completed: ${counts.name}"
+    }
+
 }
 
 /*
@@ -143,7 +188,6 @@ workflow CRISPER_SCREEN_PROCESSING {
     COMPLETION HANDLER
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-
 workflow.onComplete {
     log.info "Pipeline completed!"
     log.info "Results saved to: ${params.outdir}"
