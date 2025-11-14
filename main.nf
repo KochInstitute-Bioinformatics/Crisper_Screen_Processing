@@ -131,6 +131,11 @@ workflow CRISPER_SCREEN_PROCESSING {
         "UMI deduplication completed: ${meta.id} -> ${bam.name}"
     }
 
+    // Output summary for stats
+    COLLAPSEUMI.out.stats.view { stats ->
+        "UMI deduplication stats: ${stats.name}"
+    }
+
 }
 
 /*
