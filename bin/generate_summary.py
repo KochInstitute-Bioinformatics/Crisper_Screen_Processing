@@ -99,9 +99,9 @@ def main():
         
         print(f"  Result: Read1={sample['read1_count']}, Read2={sample['read2_count']}", file=sys.stderr)
         
-        # UMI-extracted FastQC file: {sample_id}_fastqc.zip (single file since reads are merged)
-        # Note: UMI2DEFLINE outputs a single fastq file with UMI in defline
-        umi_fastqc = fastqc_umi_path / f"{sample_id}_1_fastqc.zip"
+                # UMI-extracted FastQC file: {sample_id}_fastqc.zip
+        # Note: FastQC renames single files using meta.id prefix (no _1 suffix for single files)
+        umi_fastqc = fastqc_umi_path / f"{sample_id}_fastqc.zip"
         
         print(f"\nUMI-EXTRACTED READS:", file=sys.stderr)
         print(f"  UMI: {umi_fastqc.name} - {'✓ EXISTS' if umi_fastqc.exists() else '✗ NOT FOUND'}", file=sys.stderr)
