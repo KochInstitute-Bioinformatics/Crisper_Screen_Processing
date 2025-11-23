@@ -15,7 +15,8 @@ nextflow.enable.dsl = 2
     IMPORT LOCAL MODULES/SUBWORKFLOWS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-
+include { FASTQC                 } from './modules/nf-core/fastqc/main'
+include { GENERATE_SUMMARY       } from './modules/local/generate_summary'
 include { UMI2DEFLINE            } from './modules/local/umi2defline'
 include { ALIGN2LIBRARY          } from './modules/local/align2library'
 include { COLLAPSEUMI            } from './modules/local/collapseumi'
@@ -108,6 +109,18 @@ workflow CRISPER_SCREEN_PROCESSING {
     }
 
     //
+    // MODULE: FastQC - Quality control and read counting
+    //
+    FASTQC (
+        ch_raw_reads
+    )
+
+    // Output summary
+    FASTQC.out.zip.view { meta, zip ->
+        "FastQC completed: ${meta.id}"
+    }
+
+    //
     // MODULE: UMI extraction
     //
     UMI2DEFLINE (
@@ -187,6 +200,27 @@ workflow CRISPER_SCREEN_PROCESSING {
         sample_order,
         params.mageck_prefix
     )
+
+    //
+    // MODULE: Generate summary CSV with read counts
+    //
+    // Collect all FastQC zip files
+    FASTQC.out.zip
+        .map { meta, zips -> zips }
+        .flatten()
+        .collect()
+        .set { ch_all_fastqc_zips }
+    
+    // Generate summary with read counts from FastQC
+    GENERATE_SUMMARY (
+        file(params.input),
+        ch_all_fastqc_zips
+    )
+
+    // Output summary location
+    GENERATE_SUMMARY.out.summary.view { summary ->
+        "Summary CSV generated: ${summary}"
+    }
 }
 
 /*
