@@ -16,6 +16,7 @@ nextflow.enable.dsl = 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 include { FASTQC                 } from './modules/nf-core/fastqc/main'
+include { FASTQC as FASTQC_UMI   } from './modules/nf-core/fastqc/main'
 include { GENERATE_SUMMARY       } from './modules/local/generate_summary'
 include { UMI2DEFLINE            } from './modules/local/umi2defline'
 include { ALIGN2LIBRARY          } from './modules/local/align2library'
@@ -132,6 +133,18 @@ workflow CRISPER_SCREEN_PROCESSING {
         "UMI extracted: ${meta.id} -> ${reads.name}"
     }
 
+        //
+    // MODULE: FastQC on UMI-extracted reads
+    //
+    FASTQC_UMI (
+        UMI2DEFLINE.out.reads
+    )
+
+    // Output summary
+    FASTQC_UMI.out.zip.view { meta, zip ->
+        "FastQC UMI completed: ${meta.id}"
+    }
+
     //
     // MODULE: Alignment to library
     //
@@ -200,21 +213,29 @@ workflow CRISPER_SCREEN_PROCESSING {
         sample_order,
         params.mageck_prefix
     )
-
+    
     //
     // MODULE: Generate summary CSV with read counts
     //
-    // Collect all FastQC zip files
+    // Collect all FastQC zip files from raw reads
     FASTQC.out.zip
         .map { meta, zips -> zips }
         .flatten()
         .collect()
         .set { ch_all_fastqc_zips }
     
-    // Generate summary with read counts from FastQC
+    // Collect all FastQC zip files from UMI-extracted reads
+    FASTQC_UMI.out.zip
+        .map { meta, zips -> zips }
+        .flatten()
+        .collect()
+        .set { ch_all_fastqc_umi_zips }
+    
+    // Generate summary with read counts from both FastQC runs
     GENERATE_SUMMARY (
         file(params.input),
-        ch_all_fastqc_zips
+        ch_all_fastqc_zips,
+        ch_all_fastqc_umi_zips
     )
 
     // Output summary location

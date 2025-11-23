@@ -9,6 +9,7 @@ process GENERATE_SUMMARY {
     input:
     path samples_csv
     path fastqc_zips
+    path fastqc_umi_zips
     
     output:
     path "summary.csv", emit: summary
@@ -19,16 +20,22 @@ process GENERATE_SUMMARY {
 
     script:
     """
-    # Create a directory for FastQC outputs
-    mkdir -p fastqc_data
+    # Create directories for FastQC outputs
+    mkdir -p fastqc_raw
+    mkdir -p fastqc_umi
     
-    # Copy all FastQC zip files to the directory
+    # Copy all raw FastQC zip files
     if [ -n "${fastqc_zips}" ]; then
-        cp ${fastqc_zips} fastqc_data/ 2>/dev/null || true
+        cp ${fastqc_zips} fastqc_raw/ 2>/dev/null || true
+    fi
+    
+    # Copy all UMI FastQC zip files
+    if [ -n "${fastqc_umi_zips}" ]; then
+        cp ${fastqc_umi_zips} fastqc_umi/ 2>/dev/null || true
     fi
     
     # Generate summary
-    generate_summary.py ${samples_csv} fastqc_data summary.csv
+    generate_summary.py ${samples_csv} fastqc_raw fastqc_umi summary.csv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
