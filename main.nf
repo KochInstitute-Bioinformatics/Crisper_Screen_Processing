@@ -181,15 +181,11 @@ workflow CRISPER_SCREEN_PROCESSING {
     // Get sample order from the original samplesheet
     def sample_order = get_sample_order(params.input)
     
-    // Create a map of sample_id -> deduplicated bam_file with published paths
+    // Create a map of sample_id -> deduplicated bam_file
     COLLAPSEUMI.out.bam
-        .map { meta, bam -> 
-            // Use the published output path instead of work directory path
-            def published_path = "${params.outdir}/deduplication/${meta.id}_deduplicated.bam"
-            return [meta.id, published_path]
-        }
-        .collectFile(name: 'sample_bam_mapping_dedup.txt', newLine: true) { sample_id, bam_path ->
-            "${sample_id}\t${bam_path}"
+        .map { meta, bam -> [meta.id, bam] }
+        .collectFile(name: 'sample_bam_mapping_dedup.txt', newLine: true) { sample_id, bam ->
+            "${sample_id}\t${bam}"
         }
         .map { mapping_file ->
             // Read the mapping and create ordered BAM list
@@ -222,15 +218,11 @@ workflow CRISPER_SCREEN_PROCESSING {
     //
     // MODULE: MAGeCK count on non-collapsed (aligned) BAMs
     //
-    // Create a map of sample_id -> aligned (non-collapsed) bam_file with published paths
+    // Create a map of sample_id -> aligned (non-collapsed) bam_file
     ALIGN2LIBRARY.out.bam
-        .map { meta, bam -> 
-            // Use the published output path instead of work directory path
-            def published_path = "${params.outdir}/alignment/${meta.id}.sorted.bam"
-            return [meta.id, published_path]
-        }
-        .collectFile(name: 'sample_bam_mapping_aligned.txt', newLine: true) { sample_id, bam_path ->
-            "${sample_id}\t${bam_path}"
+        .map { meta, bam -> [meta.id, bam] }
+        .collectFile(name: 'sample_bam_mapping_aligned.txt', newLine: true) { sample_id, bam ->
+            "${sample_id}\t${bam}"
         }
         .map { mapping_file ->
             // Read the mapping and create ordered BAM list
