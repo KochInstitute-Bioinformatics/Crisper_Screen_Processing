@@ -4,7 +4,7 @@
     Crisper_Screen_Processing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     CRISPR Screen Processing Pipeline
-    Github : 
+    Github : https://github.com/KochInstitute-Bioinformatics/CRISPR_Screen_Processing
 ----------------------------------------------------------------------------------------
 */
 
@@ -21,6 +21,7 @@ include { GENERATE_SUMMARY       } from './modules/local/generate_summary'
 include { UMI2DEFLINE            } from './modules/local/umi2defline'
 include { ALIGN2LIBRARY          } from './modules/local/align2library'
 include { COLLAPSEUMI            } from './modules/local/collapseumi'
+include { GROUPUMI               } from './modules/local/groupumi'
 include { MAGECKCOUNT            } from './modules/local/mageckcount'
 include { MAGECKCOUNT as MAGECKCOUNT_NOCOLLAPSE } from './modules/local/mageckcount'
 
@@ -84,14 +85,15 @@ workflow CRISPER_SCREEN_PROCESSING {
     log.info """\
              CRISPR SCREEN PROCESSING PIPELINE
              ==================================
-             input           : ${params.input}
-             outdir          : ${params.outdir}
-             bowtie2_index   : ${params.bowtie2_index}
-             trim_3prime     : ${params.trim_3prime}
-             umi_separator   : ${params.umi_separator}
-             extract_method  : ${params.extract_method}
-             mageck_library  : ${params.mageck_library}
-             mageck_prefix   : ${params.mageck_prefix}
+             input              : ${params.input}
+             outdir             : ${params.outdir}
+             bowtie2_index      : ${params.bowtie2_index}
+             trim_3prime        : ${params.trim_3prime}
+             umi_separator      : ${params.umi_separator}
+             extract_method     : ${params.extract_method}
+             mageck_library     : ${params.mageck_library}
+             mageck_prefix      : ${params.mageck_prefix}
+             sgrna_annotations  : ${params.sgrna_annotations}
              """
              .stripIndent()
 
@@ -134,7 +136,7 @@ workflow CRISPER_SCREEN_PROCESSING {
         "UMI extracted: ${meta.id} -> ${reads.name}"
     }
 
-        //
+    //
     // MODULE: FastQC on UMI-extracted reads
     //
     FASTQC_UMI (
@@ -173,6 +175,19 @@ workflow CRISPER_SCREEN_PROCESSING {
     // Output summary for stats
     COLLAPSEUMI.out.stats.view { stats ->
         "UMI deduplication stats: ${stats.name}"
+    }
+
+    //
+    // MODULE: UMI grouping and annotation
+    //
+    GROUPUMI (
+        ALIGN2LIBRARY.out.bam.join(ALIGN2LIBRARY.out.bai),
+        file(params.sgrna_annotations)
+    )
+
+    // Output summary
+    GROUPUMI.out.annotated.view { meta, annotated ->
+        "UMI grouping completed: ${meta.id} -> ${annotated.name}"
     }
 
     //
