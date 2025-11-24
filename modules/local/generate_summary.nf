@@ -10,6 +10,7 @@ process GENERATE_SUMMARY {
     path samples_csv
     path fastqc_zips
     path fastqc_umi_zips
+    path dedup_logs
     
     output:
     path "summary.csv", emit: summary
@@ -20,9 +21,10 @@ process GENERATE_SUMMARY {
 
     script:
     """
-    # Create directories for FastQC outputs
+    # Create directories for FastQC outputs and dedup logs
     mkdir -p fastqc_raw
     mkdir -p fastqc_umi
+    mkdir -p dedup_logs
     
     # Copy all raw FastQC zip files
     if [ -n "${fastqc_zips}" ]; then
@@ -34,8 +36,13 @@ process GENERATE_SUMMARY {
         cp ${fastqc_umi_zips} fastqc_umi/ 2>/dev/null || true
     fi
     
+    # Copy all deduplication log files
+    if [ -n "${dedup_logs}" ]; then
+        cp ${dedup_logs} dedup_logs/ 2>/dev/null || true
+    fi
+    
     # Generate summary
-    generate_summary.py ${samples_csv} fastqc_raw fastqc_umi summary.csv
+    generate_summary.py ${samples_csv} fastqc_raw fastqc_umi dedup_logs summary.csv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

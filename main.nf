@@ -231,17 +231,18 @@ workflow CRISPER_SCREEN_PROCESSING {
         .collect()
         .set { ch_all_fastqc_umi_zips }
     
-    // Generate summary with read counts from both FastQC runs
+    // Collect all deduplication log files
+    COLLAPSEUMI.out.log
+        .collect()
+        .set { ch_all_dedup_logs }
+    
+    // Generate summary with read counts and deduplication statistics
     GENERATE_SUMMARY (
         file(params.input),
         ch_all_fastqc_zips,
-        ch_all_fastqc_umi_zips
+        ch_all_fastqc_umi_zips,
+        ch_all_dedup_logs
     )
-
-    // Output summary location
-    GENERATE_SUMMARY.out.summary.view { summary ->
-        "Summary CSV generated: ${summary}"
-    }
 }
 
 /*
