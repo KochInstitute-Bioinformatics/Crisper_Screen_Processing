@@ -22,6 +22,7 @@ include { UMI2DEFLINE            } from './modules/local/umi2defline'
 include { ALIGN2LIBRARY          } from './modules/local/align2library'
 include { COLLAPSEUMI            } from './modules/local/collapseumi'
 include { MAGECKCOUNT            } from './modules/local/mageckcount'
+include { MAGECKCOUNT as MAGECKCOUNT_NOCOLLAPSE } from './modules/local/mageckcount'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -244,13 +245,13 @@ workflow CRISPER_SCREEN_PROCESSING {
         .set { ch_ordered_bam_list_aligned }
     
     // Run MAGeCK count on non-collapsed BAMs with different prefix
-    MAGECKCOUNT (
+    MAGECKCOUNT_NOCOLLAPSE (
         ch_ordered_bam_list_aligned,
         params.mageck_library,
         sample_order,
         "mageck_analysis_noCollapse"
     )
-    
+
     //
     // MODULE: Generate summary CSV with read counts
     //
