@@ -175,15 +175,15 @@ workflow CRISPER_SCREEN_PROCESSING {
     }
 
     //
-    // MODULE: MAGeCK count
+    // MODULE: MAGeCK count on deduplicated BAMs
     //
     // Get sample order from the original samplesheet
     def sample_order = get_sample_order(params.input)
     
-    // Create a map of sample_id -> bam_file
+    // Create a map of sample_id -> deduplicated bam_file
     COLLAPSEUMI.out.bam
         .map { meta, bam -> [meta.id, bam] }
-        .collectFile(name: 'sample_bam_mapping.txt', newLine: true) { sample_id, bam ->
+        .collectFile(name: 'sample_bam_mapping_dedup.txt', newLine: true) { sample_id, bam ->
             "${sample_id}\t${bam}"
         }
         .map { mapping_file ->
@@ -200,18 +200,55 @@ workflow CRISPER_SCREEN_PROCESSING {
             }.findAll { it != null }  // Remove any null entries
             
             // Create a new file with ordered BAM paths
-            def ordered_file = file("${workDir}/ordered_bams.txt")
+            def ordered_file = file("${workDir}/ordered_bams_dedup.txt")
             ordered_file.text = ordered_bams.join('\n')
             return ordered_file
         }
-        .set { ch_ordered_bam_list }
+        .set { ch_ordered_bam_list_dedup }
     
-    // Run MAGeCK count
+    // Run MAGeCK count on deduplicated BAMs
     MAGECKCOUNT (
-        ch_ordered_bam_list,
+        ch_ordered_bam_list_dedup,
         params.mageck_library,
         sample_order,
         params.mageck_prefix
+    )
+    
+    //
+    // MODULE: MAGeCK count on non-collapsed (aligned) BAMs
+    //
+    // Create a map of sample_id -> aligned (non-collapsed) bam_file
+    ALIGN2LIBRARY.out.bam
+        .map { meta, bam -> [meta.id, bam] }
+        .collectFile(name: 'sample_bam_mapping_aligned.txt', newLine: true) { sample_id, bam ->
+            "${sample_id}\t${bam}"
+        }
+        .map { mapping_file ->
+            // Read the mapping and create ordered BAM list
+            def sample_to_bam = [:]
+            mapping_file.text.split('\n').findAll { it.trim() }.each { line ->
+                def parts = line.split('\t')
+                sample_to_bam[parts[0]] = parts[1]
+            }
+            
+            // Create ordered list based on sample_order
+            def ordered_bams = sample_order.collect { sample_id ->
+                sample_to_bam[sample_id]
+            }.findAll { it != null }  // Remove any null entries
+            
+            // Create a new file with ordered BAM paths
+            def ordered_file = file("${workDir}/ordered_bams_aligned.txt")
+            ordered_file.text = ordered_bams.join('\n')
+            return ordered_file
+        }
+        .set { ch_ordered_bam_list_aligned }
+    
+    // Run MAGeCK count on non-collapsed BAMs with different prefix
+    MAGECKCOUNT (
+        ch_ordered_bam_list_aligned,
+        params.mageck_library,
+        sample_order,
+        "mageck_analysis_noCollapse"
     )
     
     //
