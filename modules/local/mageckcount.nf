@@ -18,6 +18,7 @@ process MAGECKCOUNT {
     path "${output_prefix}.count.txt", emit: counts
     path "${output_prefix}.countsummary.txt", emit: summary
     path "${output_prefix}.count_normalized.txt", emit: normalized, optional: true
+    path "${output_prefix}.log", emit: log
     path "versions.yml", emit: versions
     
     when:
@@ -37,6 +38,7 @@ process MAGECKCOUNT {
     echo "Sample labels: ${sample_label_str}"
     echo "BAM files in order: \$BAM_FILES"
     
+    # Run MAGeCK count and capture log output
     mageck count \\
         -l ${library_file} \\
         -n ${output_prefix} \\
@@ -44,7 +46,7 @@ process MAGECKCOUNT {
         --sample-label ${sample_label_str} \\
         --fastq \\
         \$BAM_FILES \\
-        ${args}
+        ${args} 2>&1 | tee ${output_prefix}.log
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -57,6 +59,7 @@ process MAGECKCOUNT {
     touch ${output_prefix}.count.txt
     touch ${output_prefix}.countsummary.txt
     touch ${output_prefix}.count_normalized.txt
+    touch ${output_prefix}.log
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
