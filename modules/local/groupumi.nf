@@ -24,9 +24,11 @@ process GROUPUMI {
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
     def umi_separator = task.ext.umi_separator ?: '_'
-    
+
     """
-    # Run umi_tools group to identify UMI groups
+    # Set matplotlib config directory to avoid read-only filesystem issues
+    export MPLCONFIGDIR=\${PWD}/.matplotlib
+
     umi_tools group \\
         -I ${bam} \\
         --group-out=${prefix}.groups.tsv \\
@@ -34,7 +36,6 @@ process GROUPUMI {
         --log=${prefix}.group.log \\
         $args
 
-    # Annotate the groups with sgRNA and gene information
     annotate_umi_groups.py \\
         -i ${prefix}.groups.tsv \\
         -a ${sgrna_annotations} \\
